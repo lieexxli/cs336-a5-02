@@ -3,15 +3,25 @@ from __future__ import annotations
 
 import argparse
 import json
-import tarfile
 import urllib.request
 from pathlib import Path
+
+import pandas as pd
 
 from cs336_alignment.public_data import make_eval_record, make_sft_record, write_jsonl
 from cs336_alignment.repro import default_math_dir, resolve_repo_file
 
 
-MATH_TAR_URL = "https://people.eecs.berkeley.edu/~hendrycks/MATH.tar"
+HF_BASE_URL = "https://huggingface.co/datasets/EleutherAI/hendrycks_math/resolve/main"
+SUBJECTS = [
+    "algebra",
+    "counting_and_probability",
+    "geometry",
+    "intermediate_algebra",
+    "number_theory",
+    "prealgebra",
+    "precalculus",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -34,7 +44,7 @@ def parse_args() -> argparse.Namespace:
         "--cache-dir",
         type=Path,
         default=Path("data/_raw_math"),
-        help="Directory used to store the downloaded tarball and extracted raw files.",
+        help="Directory used to store downloaded parquet files and extracted raw files.",
     )
     parser.add_argument(
         "--skip-download",
@@ -44,18 +54,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def download_math_tarball(archive_path: Path) -> None:
-    archive_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Downloading {MATH_TAR_URL} -> {archive_path}")
-    urllib.request.urlretrieve(MATH_TAR_URL, archive_path)
-
-
-def extract_math_tarball(archive_path: Path, extract_dir: Path) -> Path:
-    print(f"Extracting {archive_path} -> {extract_dir}")
-    extract_dir.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(archive_path, "r") as tar:
-        tar.extractall(path=extract_dir)
-    return extract_dir / "MATH"
+def download_math_from_hf(math_root: Path, cache_dir: Path) -> None:
+    """Download MATH dataset parquet files from HuggingFace and build JSON directory structure."""
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    for subject in SUBJECTS:
+        for split_hf, split_out in [("train", "train"), ("test", "test")]:
+            url = f"{HF_BASE_URL}/{subject}/{split_hf}-00000-of-00001.parquet"
+            local_pq = cache_dir / f"{subject}_{split_hf}.parquet"
+            print(f"  Downloading {url} ...")
+            urllib.request.urlretrieve(url, local_pq)
+            df = pd.read_parquet(local_pq)
+            out_dir = math_root / split_out / subject
+            out_dir.mkdir(parents=True, exist_ok=True)
+            for i, row in df.iterrows():
+                record = {
+                    "problem": row["problem"],
+                    "level": row["level"],
+                    "type": row["type"],
+                    "solution": row["solution"],
+                }
+                with open(out_dir / f"{i:04d}.json", "w") as f:
+                    json.dump(record, f)
+            print(f"    -> {len(df)} examples to {out_dir}")
 
 
 def iter_math_examples(split_root: Path, split_name: str):
@@ -72,13 +92,10 @@ def main() -> None:
     output_dir = resolve_repo_file(args.output_dir)
     prompt_template_path = resolve_repo_file(args.prompt_template)
     cache_dir = resolve_repo_file(args.cache_dir)
-    archive_path = cache_dir / "MATH.tar"
     extracted_root = cache_dir / "MATH"
 
     if not args.skip_download or not extracted_root.exists():
-        if not archive_path.exists() or not args.skip_download:
-            download_math_tarball(archive_path)
-        extracted_root = extract_math_tarball(archive_path, cache_dir)
+        download_math_from_hf(extracted_root, cache_dir)
 
     with open(prompt_template_path, "r", encoding="utf-8") as f:
         prompt_template = f.read()

@@ -72,45 +72,17 @@ CS336_ALIGNMENT_JUDGE_MODEL=deepseek-chat
 
 ## 4. 数据准备
 
-仅需一条命令，从 Berkeley 公开 URL 下载 MATH 数据集并转换为 JSONL 格式：
+仅需一条命令，从 HuggingFace（`EleutherAI/hendrycks_math`）下载 MATH 数据集并转换为 JSONL 格式：
 
 ```bash
-uv run python scripts/prepare_public_math_data.py
+uv run --no-install-package flash-attn python scripts/prepare_public_math_data.py
 ```
 
-> **注意**：Berkeley 原始 URL（`https://people.eecs.berkeley.edu/~hendrycks/MATH.tar`）可能返回 403。
-> 此时可从 HuggingFace 手动下载后再运行脚本：
->
-> ```bash
-> mkdir -p data/_raw_math
-> python - << 'EOF'
-> import json, urllib.request
-> import pandas as pd
-> from pathlib import Path
->
-> SUBJECTS = [
->     "algebra", "counting_and_probability", "geometry",
->     "intermediate_algebra", "number_theory", "prealgebra", "precalculus"
-> ]
-> BASE = "https://huggingface.co/datasets/EleutherAI/hendrycks_math/resolve/main"
-> MATH_ROOT = Path("data/_raw_math/MATH")
->
-> for subject in SUBJECTS:
->     for split_hf, split_out in [("train", "train"), ("test", "test")]:
->         url = f"{BASE}/{subject}/{split_hf}-00000-of-00001.parquet"
->         local = Path(f"/tmp/{subject}_{split_hf}.parquet")
->         urllib.request.urlretrieve(url, local)
->         df = pd.read_parquet(local)
->         out = MATH_ROOT / split_out / subject
->         out.mkdir(parents=True, exist_ok=True)
->         for i, row in df.iterrows():
->             with open(out / f"{i:04d}.json", "w") as f:
->                 json.dump(dict(row), f)
->         print(f"{subject}/{split_out}: {len(df)} examples")
-> EOF
->
-> uv run python scripts/prepare_public_math_data.py --skip-download
-> ```
+或通过 Makefile：
+
+```bash
+make data
+```
 
 生成文件：
 
@@ -120,7 +92,11 @@ data/MATH/validation.jsonl  # 约 5,000 条验证样本
 data/MATH/sft.jsonl         # SFT 格式，包含 prompt（完整格式化） / response / ground_truth
 ```
 
-下载耗时取决于网络，MATH.tar 约 120 MB。
+已有数据时可跳过下载：
+
+```bash
+uv run --no-install-package flash-attn python scripts/prepare_public_math_data.py --skip-download
+```
 
 ## 5. 运行主线
 

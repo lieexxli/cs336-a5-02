@@ -9,7 +9,7 @@ EI_CONFIG    ?= exp-iter-r5e3.yaml
 GRPO_CONFIG  ?= test.yaml          # swap to nothing for full 200-step run
 MAX_PROMPTS  ?= 128                # baseline quick-check; remove flag for full eval
 
-PYTHON       := uv run python
+PYTHON       := uv run --no-install-package flash-attn python
 # ----------------------------------------
 
 .PHONY: help install env data baseline sft ei grpo grpo-full check-all clean
@@ -38,7 +38,6 @@ help:
 # ---------- install ----------
 install:
 	uv sync --no-install-package flash-attn
-	uv sync
 
 # ---------- env ----------
 env:
