@@ -57,6 +57,18 @@ def main(cfg: Config):
     cfg.paths.model_output = resolve_output_path(cfg.paths.model_output)
     cfg.paths.model_path = resolve_model_path(cfg.paths.model_path)
 
+    # Auto-adapt to single-GPU: if vllm_device points to a GPU that doesn't exist,
+    # fall back to the training device with a lower memory utilization.
+    n_gpus = torch.cuda.device_count()
+    vllm_idx = int(cfg.training.vllm_device.split(":")[-1]) if ":" in cfg.training.vllm_device else 0
+    if vllm_idx >= n_gpus:
+        logger.warning(
+            f"vllm_device={cfg.training.vllm_device} not available ({n_gpus} GPU(s) found). "
+            f"Falling back to {cfg.training.device} with gpu_memory_utilization=0.4."
+        )
+        cfg.training.vllm_device = cfg.training.device
+        cfg.training.gpu_memory_utilization = 0.4
+
     if torch.cuda.is_available():
         torch.set_float32_matmul_precision("high")
 

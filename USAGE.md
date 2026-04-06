@@ -106,28 +106,19 @@ uv run python cs336_alignment/math_baseline.py --max-prompts 128
 
 ### 5.2 SFT 训练
 
-默认需要 2 块 GPU（`cuda:0` 训练，`cuda:1` 跑 vLLM 评测）。**单卡也可以跑**，需要把 vLLM 也放到 `cuda:0` 并降低显存占用：
+默认需要 2 块 GPU（`cuda:0` 训练，`cuda:1` 跑 vLLM 评测）。**单卡时脚本会自动检测并回退**：若 `cuda:1` 不存在，自动将 vLLM 切到 `cuda:0`，并将 `gpu_memory_utilization` 降至 `0.4`，无需手动配置。
 
 ```bash
 uv run python cs336_alignment/sft_exp/train.py --config-name 128-examples.yaml
 ```
 
-单卡（40GB+ 建议）：新建一个 yaml 覆盖默认值，例如 `cs336_alignment/sft_exp/config/my-single-gpu.yaml`：
+若单卡 OOM，可手动调低显存占用（新建 yaml 覆盖）：
 
 ```yaml
-paths:
-  model_output: /data/c-sniderb/a5-alignment/sft-experiment/128-examples-single-gpu
-
+# cs336_alignment/sft_exp/config/my-single-gpu.yaml
 training:
-  vllm_device: cuda:0
-  gpu_memory_utilization: 0.4
+  gpu_memory_utilization: 0.3
   max_unique_examples: 128
-```
-
-然后：
-
-```bash
-uv run python cs336_alignment/sft_exp/train.py --config-name my-single-gpu.yaml
 ```
 
 其他可用配置（在 `cs336_alignment/sft_exp/config/` 下）：
@@ -145,7 +136,7 @@ uv run python cs336_alignment/sft_exp/train.py --config-name my-single-gpu.yaml
 
 ### 5.3 Expert Iteration 训练
 
-默认需要 2 块 GPU，同 SFT。单卡方式同理，新建 yaml 覆盖 `vllm_device` 和 `gpu_memory_utilization`：
+默认需要 2 块 GPU，同 SFT。**单卡时同样自动回退**，无需额外配置。
 
 ```bash
 uv run python cs336_alignment/expert_iteration_exp/train.py --config-name exp-iter-r5e3.yaml
