@@ -1,6 +1,7 @@
 import os
 import argparse
 import json
+import torch
 from cs336_alignment.drgrpo_grader import r1_zero_reward_fn
 from vllm import LLM
 from cs336_alignment.vllm import evaluate_vllm
@@ -47,8 +48,13 @@ def main(
         prompts = prompts[:max_prompts]
         answers = answers[:max_prompts]
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    llm_kwargs = {"device": device}
+    if device == "cpu":
+        llm_kwargs["enforce_eager"] = True
+        llm_kwargs["disable_async_output_proc"] = True
     evaluate_vllm(
-        LLM(model=model_path),
+        LLM(model=model_path, **llm_kwargs),
         reward_fn=r1_zero_reward_fn,
         prompts=prompts,
         ground_truths=answers,
