@@ -100,7 +100,8 @@ def main(cfg: Config):
         model = torch.compile(model)
 
     vllm_model = init_vllm(
-        cfg.paths.model_path, cfg.training.vllm_device, cfg.training.seed
+        cfg.paths.model_path, cfg.training.vllm_device, cfg.training.seed,
+        gpu_memory_utilization=cfg.training.gpu_memory_utilization,
     )
 
     use_wandb = cfg.training.wandb_project and cfg.training.wandb_entity

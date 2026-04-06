@@ -21,8 +21,8 @@
 |------|---------|
 | 数据准备 | 无 GPU；~15 GB 磁盘；可访问公网 |
 | Baseline 评测 | 1 块 GPU，建议 ≥ 16 GB 显存 |
-| SFT 训练 | **2 块 GPU**（训练在 `cuda:0`，vLLM 评测在 `cuda:1`） |
-| Expert Iteration | **2 块 GPU**（同上） |
+| SFT 训练 | 默认 2 块 GPU；单卡可行，需覆盖 `vllm_device=cuda:0` + 调低 `gpu_memory_utilization` |
+| Expert Iteration | 同 SFT |
 | GRPO 训练 | **1 块 GPU**，建议 ≥ 40 GB 显存（训练和 vLLM 均在 `cuda:0`） |
 
 GRPO 默认参数（`rollout_batch_size=256`，`n_grpo_steps=200`）显存需求大，H100/A100 40GB+ 更稳妥。
@@ -104,10 +104,30 @@ uv run python cs336_alignment/math_baseline.py --max-prompts 128
 
 输出：`out/math_baseline.jsonl`（第一行为 metrics，后续每行为单条结果）
 
-### 5.2 SFT 训练（需 2 GPU）
+### 5.2 SFT 训练
+
+默认需要 2 块 GPU（`cuda:0` 训练，`cuda:1` 跑 vLLM 评测）。**单卡也可以跑**，需要把 vLLM 也放到 `cuda:0` 并降低显存占用：
 
 ```bash
 uv run python cs336_alignment/sft_exp/train.py --config-name 128-examples.yaml
+```
+
+单卡（40GB+ 建议）：新建一个 yaml 覆盖默认值，例如 `cs336_alignment/sft_exp/config/my-single-gpu.yaml`：
+
+```yaml
+paths:
+  model_output: /data/c-sniderb/a5-alignment/sft-experiment/128-examples-single-gpu
+
+training:
+  vllm_device: cuda:0
+  gpu_memory_utilization: 0.4
+  max_unique_examples: 128
+```
+
+然后：
+
+```bash
+uv run python cs336_alignment/sft_exp/train.py --config-name my-single-gpu.yaml
 ```
 
 其他可用配置（在 `cs336_alignment/sft_exp/config/` 下）：
@@ -123,7 +143,9 @@ uv run python cs336_alignment/sft_exp/train.py --config-name 128-examples.yaml
 
 输出目录：`runs/sft-experiment/<config-name>/`（集群路径会自动重映射）
 
-### 5.3 Expert Iteration 训练（需 2 GPU）
+### 5.3 Expert Iteration 训练
+
+默认需要 2 块 GPU，同 SFT。单卡方式同理，新建 yaml 覆盖 `vllm_device` 和 `gpu_memory_utilization`：
 
 ```bash
 uv run python cs336_alignment/expert_iteration_exp/train.py --config-name exp-iter-r5e3.yaml
