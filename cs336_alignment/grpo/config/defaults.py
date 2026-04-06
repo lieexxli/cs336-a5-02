@@ -1,13 +1,25 @@
 from dataclasses import dataclass, field
 
+from cs336_alignment.repro import (
+    default_math_dir,
+    default_model_id,
+    default_output_dir,
+)
+
 
 @dataclass
 class PathsConfig:
-    train_examples_path: str = "/data/a5-alignment/MATH/train.jsonl"
-    val_examples_path: str = "/data/a5-alignment/MATH/validation.jsonl"
+    train_examples_path: str = field(
+        default_factory=lambda: str(default_math_dir() / "train.jsonl")
+    )
+    val_examples_path: str = field(
+        default_factory=lambda: str(default_math_dir() / "validation.jsonl")
+    )
     prompt_template_path: str = "cs336_alignment/prompts/r1_zero.prompt"
-    model_path: str = "/data/a5-alignment/models/Qwen2.5-Math-1.5B"
-    model_output: str = "/data/c-sniderb/a5-alignment/grpo-experiments"
+    model_path: str = field(default_factory=default_model_id)
+    model_output: str = field(
+        default_factory=lambda: str(default_output_dir() / "grpo-experiments")
+    )
 
 
 @dataclass
@@ -50,9 +62,8 @@ class TrainingConfig:
     adam_beta2: float = 0.95
     adam_eps: float = 1e-8
 
-    wandb_entity: str = "brandon-snider-stanford-university"
-    wandb_project: str = "cs336-a5"
-    # wandb_project: None = None
+    wandb_entity: str | None = None
+    wandb_project: str | None = None
     torch_compile: bool = True
     log_step_interval: int = 1
     wandb_tags: list[str] = field(default_factory=lambda: ["grpo"])

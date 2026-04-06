@@ -57,9 +57,10 @@ def evaluate_vllm(
         sampling_params,
     )
 
-    os.makedirs(out_dir, exist_ok=True)
+    if write:
+        os.makedirs(out_dir, exist_ok=True)
     filename = out_file or f"{ordered_filename('eval')}.jsonl"
-    outpath = os.path.join(out_dir, filename)
+    outpath = os.path.join(out_dir, filename) if out_dir else None
 
     results = []
 

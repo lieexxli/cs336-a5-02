@@ -1,0 +1,9 @@
+alpaca_eval_openai_deepseek_fn:
+  prompt_template: "alpaca_eval_openai_deepseek_fn/alpaca_eval_fn.txt"
+  fn_completions: "openai_completions"
+  completions_kwargs:
+    model_name: "deepseek-chat"
+    max_tokens: 100
+    temperature: 0.0
+    batch_size: 1
+  fn_completion_parser: "ranking_parser"

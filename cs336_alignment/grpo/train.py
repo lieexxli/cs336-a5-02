@@ -23,6 +23,13 @@ from cs336_alignment.grpo.config.defaults import Config
 from cs336_alignment.drgrpo_grader import r1_zero_reward_fn, question_only_reward_fn
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from cs336_alignment.grpo.grpo_microbatch_train_step import grpo_microbatch_train_step
+from cs336_alignment.repro import (
+    default_submitit_dir,
+    resolve_data_path,
+    resolve_model_path,
+    resolve_output_path,
+    resolve_repo_file,
+)
 
 NORMALIZE_CONSTANT = 1024
 
@@ -36,6 +43,14 @@ def main(cfg: Config):
         format="%(asctime)s - %(module)s - %(levelname)s - %(message)s",
         level=logging.INFO,
     )
+
+    cfg.paths.train_examples_path = str(resolve_data_path(cfg.paths.train_examples_path))
+    cfg.paths.val_examples_path = str(resolve_data_path(cfg.paths.val_examples_path))
+    cfg.paths.prompt_template_path = str(
+        resolve_repo_file(cfg.paths.prompt_template_path)
+    )
+    cfg.paths.model_output = str(resolve_output_path(cfg.paths.model_output))
+    cfg.paths.model_path = resolve_model_path(cfg.paths.model_path)
 
     assert (
         cfg.training.train_batch_size % cfg.training.gradient_accumulation_steps == 0
@@ -499,17 +514,17 @@ if __name__ == "__main__":
     else:
         cfg = default_cfg
 
-    executor = submitit.AutoExecutor(folder="/data/c-sniderb/a5-alignment/grpo/slurm")
-    executor.update_parameters(
-        timeout_min=240,
-        slurm_account="student",
-        slurm_partition="a5-batch",
-        slurm_qos="a5-batch-qos",
-        slurm_gpus_per_node="1",
-        slurm_nodes=1,
-    )
-
     if args.submit:
+        cfg.paths.model_output = str(resolve_output_path(cfg.paths.model_output))
+        executor = submitit.AutoExecutor(folder=default_submitit_dir(cfg.paths.model_output))
+        executor.update_parameters(
+            timeout_min=240,
+            slurm_account="student",
+            slurm_partition="a5-batch",
+            slurm_qos="a5-batch-qos",
+            slurm_gpus_per_node="1",
+            slurm_nodes=1,
+        )
         job = executor.submit(main, cfg)
         logger.info(f"Submitted job with ID {job.job_id}")
         if args.wait:

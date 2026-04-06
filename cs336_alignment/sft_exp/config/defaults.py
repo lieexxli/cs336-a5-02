@@ -2,17 +2,29 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from omegaconf import OmegaConf
 
+from cs336_alignment.repro import (
+    default_math_dir,
+    default_model_id,
+    default_output_dir,
+)
+
 # Register a custom resolver for integer division
 OmegaConf.register_new_resolver("div", lambda x, y: int(x) // int(y))
 
 
 @dataclass
 class PathsConfig:
-    train_examples_path: Path = Path("/data/a5-alignment/MATH/sft.jsonl")
-    val_examples_path: Path = Path("/data/a5-alignment/MATH/validation.jsonl")
+    train_examples_path: Path = field(
+        default_factory=lambda: default_math_dir() / "sft.jsonl"
+    )
+    val_examples_path: Path = field(
+        default_factory=lambda: default_math_dir() / "validation.jsonl"
+    )
     val_prompt_template_path: Path = Path("cs336_alignment/prompts/r1_zero.prompt")
-    model_path: Path = Path("/data/a5-alignment/models/Qwen2.5-Math-1.5B")
-    model_output: Path = Path("/data/c-sniderb/a5-alignment/sft-experiment")
+    model_path: str = field(default_factory=default_model_id)
+    model_output: Path = field(
+        default_factory=lambda: default_output_dir() / "sft-experiment"
+    )
 
 
 @dataclass
@@ -42,9 +54,8 @@ class TrainingConfig:
     adam_beta1: float = 0.9
     adam_beta2: float = 0.999
     adam_eps: float = 1e-8
-    wandb_entity: str | None = "brandon-snider-stanford-university"
-    wandb_project: str = "cs336-a5"
-    # wandb_project: str | None = None
+    wandb_entity: str | None = None
+    wandb_project: str | None = None
     compile: bool = True
     log_interval: int = 1
 

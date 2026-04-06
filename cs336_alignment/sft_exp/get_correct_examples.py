@@ -3,9 +3,9 @@ from pathlib import Path
 from cs336_alignment.drgrpo_grader import r1_zero_reward_fn
 
 from pydantic import BaseModel
+from cs336_alignment.repro import resolve_data_path
 
-TRAIN_EXAMPLES_PATH: Path = Path("/data/a5-alignment/MATH/sft.jsonl")
-PROMPT_TEMPLATE_PATH = "cs336_alignment/prompts/r1_zero.prompt"
+TRAIN_EXAMPLES_PATH: Path = resolve_data_path("data/MATH/sft.jsonl")
 
 
 class EvalResult(BaseModel):
@@ -19,10 +19,7 @@ def main():
     with open(TRAIN_EXAMPLES_PATH, "r") as f:
         examples = [json.loads(line) for line in f]
 
-    with open(PROMPT_TEMPLATE_PATH, "r") as f:
-        prompt_template = f.read()
-
-    prompts = [prompt_template.replace("{question}", ex["prompt"]) for ex in examples]
+    prompts = [ex["prompt"] for ex in examples]
     completions = [ex["response"] for ex in examples]
     answers = [ex["ground_truth"] for ex in examples]
 

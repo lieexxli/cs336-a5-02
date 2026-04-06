@@ -4,11 +4,19 @@ import json
 from cs336_alignment.drgrpo_grader import r1_zero_reward_fn
 from vllm import LLM
 from cs336_alignment.vllm import evaluate_vllm
+from cs336_alignment.repro import (
+    default_math_dir,
+    default_model_id,
+    resolve_data_path,
+    resolve_model_path,
+    resolve_output_path,
+    resolve_repo_file,
+)
 
 PROMPT_TEMPLATE_PATH = "cs336_alignment/prompts/r1_zero.prompt"
 
-DEFAULT_EXAMPLES_PATH = "/data/a5-alignment/MATH/validation.jsonl"
-DEFAULT_MODEL_PATH = "/data/a5-alignment/models/Qwen2.5-Math-1.5B"
+DEFAULT_EXAMPLES_PATH = str(default_math_dir() / "validation.jsonl")
+DEFAULT_MODEL_PATH = default_model_id()
 
 DEFAULT_OUT_DIR = "out"
 DEFAULT_OUT_FILE = "math_baseline.jsonl"
@@ -21,10 +29,15 @@ def main(
     out_file: str,
     max_prompts: int | None = None,
 ):
+    examples_path = resolve_data_path(examples_path)
+    model_path = resolve_model_path(model_path)
+    out_dir = resolve_output_path(out_dir)
+    prompt_template_path = resolve_repo_file(PROMPT_TEMPLATE_PATH)
+
     with open(examples_path) as f:
         examples = [json.loads(line) for line in f]
 
-    with open(PROMPT_TEMPLATE_PATH) as f:
+    with open(prompt_template_path) as f:
         prompt_template = f.read()
 
     prompts = [prompt_template.replace("{question}", ex["problem"]) for ex in examples]

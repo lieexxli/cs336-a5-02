@@ -19,6 +19,13 @@ from cs336_alignment.sft_exp.sft_microbatch_train_step import sft_microbatch_tra
 from cs336_alignment.utils import tokenize_prompt_and_output, get_response_log_probs
 from cs336_alignment.sft_exp.config.defaults import Config
 from cs336_alignment.drgrpo_grader import r1_zero_reward_fn
+from cs336_alignment.repro import (
+    default_submitit_dir,
+    resolve_data_path,
+    resolve_model_path,
+    resolve_output_path,
+    resolve_repo_file,
+)
 from transformers import AutoModelForCausalLM, AutoTokenizer, get_scheduler
 
 logger = logging.getLogger(__name__)
@@ -41,6 +48,14 @@ def main(cfg: Config):
         format="%(asctime)s - %(module)s - %(levelname)s - %(message)s",
         level=logging.INFO,
     )
+
+    cfg.paths.train_examples_path = resolve_data_path(cfg.paths.train_examples_path)
+    cfg.paths.val_examples_path = resolve_data_path(cfg.paths.val_examples_path)
+    cfg.paths.val_prompt_template_path = resolve_repo_file(
+        cfg.paths.val_prompt_template_path
+    )
+    cfg.paths.model_output = resolve_output_path(cfg.paths.model_output)
+    cfg.paths.model_path = resolve_model_path(cfg.paths.model_path)
 
     if torch.cuda.is_available():
         torch.set_float32_matmul_precision("high")
@@ -108,7 +123,7 @@ def main(cfg: Config):
         model = torch.compile(model)
 
     vllm_model = init_vllm(
-        cfg.paths.model_path.as_posix(), cfg.training.vllm_device, cfg.training.seed
+        cfg.paths.model_path, cfg.training.vllm_device, cfg.training.seed
     )
 
     param_dict = {pn: p for pn, p in model.named_parameters() if p.requires_grad}
@@ -310,18 +325,16 @@ if __name__ == "__main__":
     else:
         cfg = default_cfg
 
-    executor = submitit.AutoExecutor(
-        folder="/data/c-sniderb/a5-alignment/sft-experiment/slurm"
-    )
-    executor.update_parameters(
-        timeout_min=60,
-        slurm_account="student",
-        slurm_partition="a4-batch",
-        slurm_qos="a4-batch-qos",
-        slurm_gpus_per_node="2",
-    )
-
     if args.submit:
+        cfg.paths.model_output = resolve_output_path(cfg.paths.model_output)
+        executor = submitit.AutoExecutor(folder=default_submitit_dir(cfg.paths.model_output))
+        executor.update_parameters(
+            timeout_min=60,
+            slurm_account="student",
+            slurm_partition="a4-batch",
+            slurm_qos="a4-batch-qos",
+            slurm_gpus_per_node="2",
+        )
         job = executor.submit(main, cfg)
         logger.info(f"Submitted job with ID {job.job_id}")
         if args.wait:
